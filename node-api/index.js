@@ -18,13 +18,11 @@ const {
   Attribute,
   ProductMaster,
 } = require('./src/models');
-
 // userRoute(app);
 categoryRoute(app);
 brandRoute(app);
 attributeRoute(app);
 productMasterRoute(app);
-
 // auto sync models
 sequelize.sync({ alter: true }).then(() => {
     console.log("Database synced!");
