@@ -69,7 +69,7 @@ export function Navbar() {
         <Space align="center" size="small">
           <SafetyCertificateOutlined style={{ fontSize: 22, color: '#1677ff' }} />
           <Text strong style={{ fontSize: 17, fontFamily: 'var(--font-heading)' }}>
-            Enterprise<span style={{ color: '#1677ff' }}>HR</span>
+            Clubcode<span style={{ color: '#1677ff' }}>POS</span>
           </Text>
         </Space>
       </Space>

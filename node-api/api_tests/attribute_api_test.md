@@ -6,7 +6,7 @@ Comprehensive testing instructions, HTTP specifications, cURL commands, and requ
 
 ## 🌐 Environment & Base Configuration
 
-- **Base URL**: `http://localhost:3000`
+- **Base URL**: `http://localhost:5000`
 - **Prefix Path**: `/api/v1/attribute`
 - **Default Headers**:
   ```http
@@ -34,7 +34,7 @@ Comprehensive testing instructions, HTTP specifications, cURL commands, and requ
 Creates a new attribute definition and value.
 
 - **Method**: `POST`
-- **URL**: `http://localhost:3000/api/v1/attribute/create`
+- **URL**: `http://localhost:5000/api/v1/attribute/create`
 - **Headers**:
   ```http
   Content-Type: application/json
@@ -84,7 +84,7 @@ Creates a new attribute definition and value.
 
 #### cURL Command:
 ```bash
-curl -X POST http://localhost:3000/api/v1/attribute/create \
+curl -X POST http://localhost:5000/api/v1/attribute/create \
   -H "Content-Type: application/json" \
   -d '{
     "attribute_name": "Size",
@@ -100,7 +100,7 @@ curl -X POST http://localhost:3000/api/v1/attribute/create \
 Retrieves all attributes with optional search across `attribute_name` & `attribute_value`, and active status filtering.
 
 - **Method**: `GET`
-- **URL**: `http://localhost:3000/api/v1/attribute/getall`
+- **URL**: `http://localhost:5000/api/v1/attribute/getall`
 - **Headers**:
   ```http
   Accept: application/json
@@ -113,10 +113,10 @@ Retrieves all attributes with optional search across `attribute_name` & `attribu
 | `active` | `number` / `string` | No | Filter active status (`1`, `0`, `true`, `false`) | `?active=1` |
 
 #### Example URLs:
-1. **Get all without filter**: `http://localhost:3000/api/v1/attribute/getall`
-2. **Search by keyword**: `http://localhost:3000/api/v1/attribute/getall?search=Size`
-3. **Filter active only**: `http://localhost:3000/api/v1/attribute/getall?active=1`
-4. **Combined search & filter**: `http://localhost:3000/api/v1/attribute/getall?search=Sugar&active=1`
+1. **Get all without filter**: `http://localhost:5000/api/v1/attribute/getall`
+2. **Search by keyword**: `http://localhost:5000/api/v1/attribute/getall?search=Size`
+3. **Filter active only**: `http://localhost:5000/api/v1/attribute/getall?active=1`
+4. **Combined search & filter**: `http://localhost:5000/api/v1/attribute/getall?search=Sugar&active=1`
 
 #### Expected Response (`200 OK`):
 ```json
@@ -154,7 +154,7 @@ Retrieves all attributes with optional search across `attribute_name` & `attribu
 
 #### cURL Command:
 ```bash
-curl -X GET "http://localhost:3000/api/v1/attribute/getall?search=Size&active=1" \
+curl -X GET "http://localhost:5000/api/v1/attribute/getall?search=Size&active=1" \
   -H "Accept: application/json"
 ```
 
@@ -165,7 +165,7 @@ curl -X GET "http://localhost:3000/api/v1/attribute/getall?search=Size&active=1"
 Updates an existing attribute record by ID.
 
 - **Method**: `PUT`
-- **URL**: `http://localhost:3000/api/v1/attribute/update/1`
+- **URL**: `http://localhost:5000/api/v1/attribute/update/1`
 - **Headers**:
   ```http
   Content-Type: application/json
@@ -208,7 +208,7 @@ Updates an existing attribute record by ID.
 
 #### cURL Command:
 ```bash
-curl -X PUT http://localhost:3000/api/v1/attribute/update/1 \
+curl -X PUT http://localhost:5000/api/v1/attribute/update/1 \
   -H "Content-Type: application/json" \
   -d '{
     "attribute_name": "Cup Size",
@@ -224,7 +224,7 @@ curl -X PUT http://localhost:3000/api/v1/attribute/update/1 \
 Deletes an attribute record permanently by ID.
 
 - **Method**: `DELETE`
-- **URL**: `http://localhost:3000/api/v1/attribute/delete/1`
+- **URL**: `http://localhost:5000/api/v1/attribute/delete/1`
 - **Headers**:
   ```http
   Accept: application/json
@@ -250,7 +250,7 @@ Deletes an attribute record permanently by ID.
 
 #### cURL Command:
 ```bash
-curl -X DELETE http://localhost:3000/api/v1/attribute/delete/1 \
+curl -X DELETE http://localhost:5000/api/v1/attribute/delete/1 \
   -H "Accept: application/json"
 ```
 
