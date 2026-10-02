@@ -13,8 +13,7 @@ import { UserList } from '@/features/users/pages/UserList';
 import { UserDetail } from '@/features/users/pages/UserDetail';
 import { EmployeeList } from '@/features/employee/pages/EmployeeList';
 import { EmployeeDetail } from '@/features/employee/pages/EmployeeDetail';
-import { ProductList } from '@/features/products/pages/ProductList';
-import { CategoryList } from '@/features/products/pages/CategoryList';
+import { ProductManagement } from '@/features/product/pages/ProductManagement';
 
 export function AppRoutes() {
   return (
@@ -26,8 +25,8 @@ export function AppRoutes() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/users" element={<UserList />} />
           <Route path="/users/:id" element={<UserDetail />} />
-          <Route path="/products" element={<ProductList />} />
-          <Route path="/products/categories" element={<CategoryList />} />
+          <Route path="/products" element={<ProductManagement />} />
+          <Route path="/products/categories" element={<Navigate to="/products?tab=categories" replace />} />
           <Route path="/employee" element={<EmployeeList />} />
           <Route path="/employee/:id" element={<EmployeeDetail />} />
         </Route>
@@ -38,3 +37,4 @@ export function AppRoutes() {
 }
 
 export default AppRoutes;
+

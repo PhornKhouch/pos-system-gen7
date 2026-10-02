@@ -18,6 +18,19 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const searchParams = new URLSearchParams(location.search);
+  const tab = searchParams.get('tab');
+
+  // Compute selected menu key
+  let selectedKey = location.pathname;
+  if (location.pathname === '/products') {
+    if (tab === 'categories') {
+      selectedKey = '/products?tab=categories';
+    } else {
+      selectedKey = '/products';
+    }
+  }
+
   const menuItems = [
     {
       key: '/',
@@ -40,7 +53,7 @@ export function Sidebar() {
           label: 'Product Catalog',
         },
         {
-          key: '/products/categories',
+          key: '/products?tab=categories',
           icon: <AppstoreOutlined />,
           label: 'Categories',
         },
@@ -68,7 +81,7 @@ export function Sidebar() {
     >
       <Menu
         mode="inline"
-        selectedKeys={[location.pathname]}
+        selectedKeys={[selectedKey]}
         defaultOpenKeys={['inventory']}
         items={menuItems}
         onClick={({ key }) => {
