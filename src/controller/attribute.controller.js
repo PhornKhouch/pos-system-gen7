@@ -1,6 +1,7 @@
 const { Op } = require("sequelize");
 const { Attribute } = require("../models");
 const { IsEmpty } = require("../helper/validate");
+const logError = require("../helper/log_error");
 
 // 1. GET ALL ATTRIBUTES
 const getAttribute = async (req, res) => {
@@ -32,12 +33,7 @@ const getAttribute = async (req, res) => {
       list: attributes,
     });
   } catch (error) {
-    console.error("Error in getAttribute:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    logError(res, error, "attribute.getAttribute");
   }
 };
 
@@ -88,12 +84,7 @@ const createAttribute = async (req, res) => {
       data: newAttribute,
     });
   } catch (error) {
-    console.error("Error in createAttribute:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create attribute",
-      error: error.message,
-    });
+    logError(res, error, "attribute.createAttribute");
   }
 };
 
@@ -149,12 +140,7 @@ const updateAttribute = async (req, res) => {
       data: attribute,
     });
   } catch (error) {
-    console.error("Error in updateAttribute:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update attribute",
-      error: error.message,
-    });
+    logError(res, error, "attribute.updateAttribute");
   }
 };
 
@@ -185,12 +171,7 @@ const deleteAttribute = async (req, res) => {
       message: `Attribute with ID ${id} deleted successfully`,
     });
   } catch (error) {
-    console.error("Error in deleteAttribute:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete attribute",
-      error: error.message,
-    });
+    logError(res, error, "attribute.deleteAttribute");
   }
 };
 

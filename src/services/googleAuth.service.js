@@ -33,9 +33,9 @@ dotenv.config();
     'https://www.googleapis.com/auth/userinfo.email',
   ];
 
+  // Login only: we don't call Google APIs later, so no refresh_token / offline access needed
   return oauth2Client.generateAuthUrl({
-    access_type: 'offline', // Requests refresh_token
-    prompt: 'consent',      // Forces approval prompt so refresh_token is always returned
+    prompt: 'select_account', // Let the customer pick which Google account to use
     scope: scopes,
     state,
   });

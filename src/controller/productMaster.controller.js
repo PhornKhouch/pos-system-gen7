@@ -1,6 +1,8 @@
 const { Op } = require("sequelize");
-const { ProductMaster, Category, Brand, Attribute } = require("../models");
+const { ProductMaster, ProductImage, Category, Brand, Attribute } = require("../models");
 const { IsEmpty } = require("../helper/validate");
+const { removeFile } = require("../helper/upload");
+const logError = require("../helper/log_error");
 
 // 1. GET ALL PRODUCT MASTERS
 const getProductMaster = async (req, res) => {
@@ -37,7 +39,7 @@ const getProductMaster = async (req, res) => {
       where: whereClause,
       include: [
         { model: Category, as: "category", attributes: ["category_id", "category_name"] },
-        { model: Brand, as: "brand", attributes: ["brand_id", "brand_name"] },
+        { model: Brand, as: "brand", attributes: ["brand_id", "brand_name", "image"] },
         { model: Attribute, as: "attribute", attributes: ["attribute_id", "attribute_name", "attribute_value"] },
       ],
       order: [["product_id", "DESC"]],
@@ -49,12 +51,7 @@ const getProductMaster = async (req, res) => {
       list: products,
     });
   } catch (error) {
-    console.error("Error in getProductMaster:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    logError(res, error, "productMaster.getProductMaster");
   }
 };
 
@@ -75,7 +72,9 @@ const getProductMasterById = async (req, res) => {
         { model: Category, as: "category" },
         { model: Brand, as: "brand" },
         { model: Attribute, as: "attribute" },
+        { model: ProductImage, as: "images" },
       ],
+      order: [[{ model: ProductImage, as: "images" }, "display_order", "ASC"]],
     });
 
     if (!product) {
@@ -90,12 +89,7 @@ const getProductMasterById = async (req, res) => {
       data: product,
     });
   } catch (error) {
-    console.error("Error in getProductMasterById:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch product",
-      error: error.message,
-    });
+    logError(res, error, "productMaster.getProductMasterById");
   }
 };
 
@@ -116,8 +110,11 @@ const createProductMaster = async (req, res) => {
       active,
     } = req.body;
 
+    const image = req.file ? req.file.filename : (req.body.image || null);
+
     // Validate required fields
     if (IsEmpty(product_name) || !product_name.trim()) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: "product_name is required",
@@ -125,6 +122,7 @@ const createProductMaster = async (req, res) => {
     }
 
     if (IsEmpty(category_id)) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: "category_id is required",
@@ -132,6 +130,7 @@ const createProductMaster = async (req, res) => {
     }
 
     if (IsEmpty(brand_id)) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: "brand_id is required",
@@ -139,13 +138,15 @@ const createProductMaster = async (req, res) => {
     }
 
     if (IsEmpty(sku) || !sku.trim()) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: "sku is required",
       });
     }
 
-    if (price === undefined || price === null || isNaN(price)) {
+    if (price === undefined || price === null || isNaN(parseFloat(price))) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: "Valid price is required",
@@ -158,6 +159,7 @@ const createProductMaster = async (req, res) => {
     });
 
     if (existingSku) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: `SKU '${sku.trim()}' is already in use`,
@@ -171,6 +173,7 @@ const createProductMaster = async (req, res) => {
       });
 
       if (existingBarcode) {
+        if (req.file) removeFile(req.file.filename);
         return res.status(400).json({
           success: false,
           message: `Barcode '${barcode.trim()}' is already in use`,
@@ -181,6 +184,7 @@ const createProductMaster = async (req, res) => {
     // Verify foreign key existence
     const categoryExists = await Category.findByPk(category_id);
     if (!categoryExists) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: `Category with ID ${category_id} does not exist`,
@@ -189,34 +193,43 @@ const createProductMaster = async (req, res) => {
 
     const brandExists = await Brand.findByPk(brand_id);
     if (!brandExists) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: `Brand with ID ${brand_id} does not exist`,
       });
     }
 
-    if (attribute_id) {
-      const attributeExists = await Attribute.findByPk(attribute_id);
+    const parsedAttrId = attribute_id && attribute_id !== "null" && attribute_id !== "" ? Number(attribute_id) : null;
+    if (parsedAttrId) {
+      const attributeExists = await Attribute.findByPk(parsedAttrId);
       if (!attributeExists) {
+        if (req.file) removeFile(req.file.filename);
         return res.status(400).json({
           success: false,
-          message: `Attribute with ID ${attribute_id} does not exist`,
+          message: `Attribute with ID ${parsedAttrId} does not exist`,
         });
       }
     }
 
+    let isActive = 1;
+    if (active !== undefined) {
+      isActive = active === true || active === "true" || active === 1 || active === "1" ? 1 : 0;
+    }
+
     const newProduct = await ProductMaster.create({
       product_name: product_name.trim(),
-      category_id,
-      brand_id,
-      attribute_id: attribute_id || null,
+      category_id: Number(category_id),
+      brand_id: Number(brand_id),
+      attribute_id: parsedAttrId,
       sku: sku.trim(),
-      barcode: barcode ? barcode.trim() : null,
-      description: description || null,
+      barcode: barcode && barcode.trim() ? barcode.trim() : null,
+      description: description && description.trim() ? description.trim() : null,
+      image: image || null,
       price: parseFloat(price),
-      cost: cost !== undefined && !isNaN(cost) ? parseFloat(cost) : 0.0,
-      quantity_stock: quantity_stock !== undefined && !isNaN(quantity_stock) ? parseInt(quantity_stock) : 0,
-      active: active !== undefined ? (active ? 1 : 0) : 1,
+      cost: cost !== undefined && cost !== "" && cost !== "null" && !isNaN(cost) ? parseFloat(cost) : 0.0,
+      quantity_stock: quantity_stock !== undefined && quantity_stock !== "" && quantity_stock !== "null" && !isNaN(quantity_stock) ? parseInt(quantity_stock) : 0,
+      active: isActive,
     });
 
     res.status(201).json({
@@ -225,12 +238,8 @@ const createProductMaster = async (req, res) => {
       data: newProduct,
     });
   } catch (error) {
-    console.error("Error in createProductMaster:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create product",
-      error: error.message,
-    });
+    if (req.file) removeFile(req.file.filename);
+    logError(res, error, "productMaster.createProductMaster");
   }
 };
 
@@ -253,6 +262,7 @@ const updateProductMaster = async (req, res) => {
     } = req.body;
 
     if (!id) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: "Product ID is required in URL parameter or body",
@@ -261,6 +271,7 @@ const updateProductMaster = async (req, res) => {
 
     const product = await ProductMaster.findByPk(id);
     if (!product) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(404).json({
         success: false,
         message: `Product with ID ${id} not found`,
@@ -277,6 +288,7 @@ const updateProductMaster = async (req, res) => {
       });
 
       if (duplicateSku) {
+        if (req.file) removeFile(req.file.filename);
         return res.status(400).json({
           success: false,
           message: `SKU '${sku.trim()}' is already in use`,
@@ -294,6 +306,7 @@ const updateProductMaster = async (req, res) => {
       });
 
       if (duplicateBarcode) {
+        if (req.file) removeFile(req.file.filename);
         return res.status(400).json({
           success: false,
           message: `Barcode '${barcode.trim()}' is already in use`,
@@ -301,19 +314,48 @@ const updateProductMaster = async (req, res) => {
       }
     }
 
+    // Handle image update & cleanup
+    let newImage = product.image;
+    if (req.file) {
+      if (product.image && product.image !== req.file.filename) {
+        removeFile(product.image);
+      }
+      newImage = req.file.filename;
+    } else if (req.body.image !== undefined) {
+      if (!req.body.image && product.image) {
+        removeFile(product.image);
+        newImage = null;
+      } else if (req.body.image) {
+        newImage = req.body.image;
+      }
+    }
+
+    // Parse attribute_id
+    let parsedAttrId = product.attribute_id;
+    if (attribute_id !== undefined) {
+      parsedAttrId = attribute_id && attribute_id !== "null" && attribute_id !== "" ? Number(attribute_id) : null;
+    }
+
+    // Parse active
+    let isActive = product.active;
+    if (active !== undefined) {
+      isActive = active === true || active === "true" || active === 1 || active === "1" ? 1 : 0;
+    }
+
     // Update product
     await product.update({
       product_name: product_name !== undefined ? product_name.trim() : product.product_name,
-      category_id: category_id !== undefined ? category_id : product.category_id,
-      brand_id: brand_id !== undefined ? brand_id : product.brand_id,
-      attribute_id: attribute_id !== undefined ? (attribute_id || null) : product.attribute_id,
+      category_id: category_id !== undefined ? Number(category_id) : product.category_id,
+      brand_id: brand_id !== undefined ? Number(brand_id) : product.brand_id,
+      attribute_id: parsedAttrId,
       sku: sku !== undefined ? sku.trim() : product.sku,
-      barcode: barcode !== undefined ? (barcode ? barcode.trim() : null) : product.barcode,
-      description: description !== undefined ? description : product.description,
+      barcode: barcode !== undefined ? (barcode && barcode.trim() ? barcode.trim() : null) : product.barcode,
+      description: description !== undefined ? (description && description.trim() ? description.trim() : null) : product.description,
+      image: newImage,
       price: price !== undefined ? parseFloat(price) : product.price,
-      cost: cost !== undefined ? parseFloat(cost) : product.cost,
-      quantity_stock: quantity_stock !== undefined ? parseInt(quantity_stock) : product.quantity_stock,
-      active: active !== undefined ? (active ? 1 : 0) : product.active,
+      cost: cost !== undefined && cost !== "" && cost !== "null" ? parseFloat(cost) : product.cost,
+      quantity_stock: quantity_stock !== undefined && quantity_stock !== "" && quantity_stock !== "null" ? parseInt(quantity_stock) : product.quantity_stock,
+      active: isActive,
     });
 
     res.status(200).json({
@@ -322,12 +364,8 @@ const updateProductMaster = async (req, res) => {
       data: product,
     });
   } catch (error) {
-    console.error("Error in updateProductMaster:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update product",
-      error: error.message,
-    });
+    if (req.file) removeFile(req.file.filename);
+    logError(res, error, "productMaster.updateProductMaster");
   }
 };
 
@@ -351,6 +389,16 @@ const deleteProductMaster = async (req, res) => {
       });
     }
 
+    // Remove associated image file
+    if (product.image) {
+      removeFile(product.image);
+    }
+
+    // Remove gallery images (rows + files)
+    const galleryImages = await ProductImage.findAll({ where: { product_id: id } });
+    galleryImages.forEach((img) => removeFile(img.image_url));
+    await ProductImage.destroy({ where: { product_id: id } });
+
     await product.destroy();
 
     res.status(200).json({
@@ -358,12 +406,7 @@ const deleteProductMaster = async (req, res) => {
       message: `Product with ID ${id} deleted successfully`,
     });
   } catch (error) {
-    console.error("Error in deleteProductMaster:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete product",
-      error: error.message,
-    });
+    logError(res, error, "productMaster.deleteProductMaster");
   }
 };
 
