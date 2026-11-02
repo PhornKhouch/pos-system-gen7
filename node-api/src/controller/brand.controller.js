@@ -1,6 +1,8 @@
 const { Op } = require("sequelize");
 const { Brand } = require("../models");
 const { IsEmpty } = require("../helper/validate");
+const { removeFile } = require("../helper/upload");
+const logError = require("../helper/log_error");
 
 // 1. GET ALL BRANDS
 const getBrand = async (req, res) => {
@@ -29,12 +31,7 @@ const getBrand = async (req, res) => {
       list: brands,
     });
   } catch (error) {
-    console.error("Error in getBrand:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    logError(res, error, "brand.getBrand");
   }
 };
 
@@ -42,9 +39,11 @@ const getBrand = async (req, res) => {
 const createBrand = async (req, res) => {
   try {
     const { brand_name, description, active } = req.body;
+    const image = req.file ? req.file.filename : (req.body.image || null);
 
     // Validate required fields
     if (IsEmpty(brand_name) || !brand_name.trim()) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: "brand_name is required",
@@ -57,17 +56,25 @@ const createBrand = async (req, res) => {
     });
 
     if (existingBrand) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: `Brand '${brand_name.trim()}' already exists`,
       });
     }
 
+    // Parse active boolean/number
+    let isActive = 1;
+    if (active !== undefined) {
+      isActive = active === true || active === "true" || active === 1 || active === "1" ? 1 : 0;
+    }
+
     // Create new brand
     const newBrand = await Brand.create({
       brand_name: brand_name.trim(),
       description: description || null,
-      active: active !== undefined ? (active ? 1 : 0) : 1,
+      image: image || null,
+      active: isActive,
     });
 
     res.status(201).json({
@@ -76,12 +83,8 @@ const createBrand = async (req, res) => {
       data: newBrand,
     });
   } catch (error) {
-    console.error("Error in createBrand:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create brand",
-      error: error.message,
-    });
+    if (req.file) removeFile(req.file.filename);
+    logError(res, error, "brand.createBrand");
   }
 };
 
@@ -92,6 +95,7 @@ const updateBrand = async (req, res) => {
     const { brand_name, description, active } = req.body;
 
     if (!id) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: "Brand ID is required in URL parameter or body",
@@ -101,6 +105,7 @@ const updateBrand = async (req, res) => {
     // Find brand by Primary Key
     const brand = await Brand.findByPk(id);
     if (!brand) {
+      if (req.file) removeFile(req.file.filename);
       return res.status(404).json({
         success: false,
         message: `Brand with ID ${id} not found`,
@@ -117,6 +122,7 @@ const updateBrand = async (req, res) => {
       });
 
       if (duplicate) {
+        if (req.file) removeFile(req.file.filename);
         return res.status(400).json({
           success: false,
           message: `Brand name '${brand_name.trim()}' is already in use`,
@@ -124,11 +130,36 @@ const updateBrand = async (req, res) => {
       }
     }
 
+    // Handle image update & cleanup
+    let newImage = brand.image;
+    if (req.file) {
+      // If a previous image existed, clean it up
+      if (brand.image && brand.image !== req.file.filename) {
+        removeFile(brand.image);
+      }
+      newImage = req.file.filename;
+    } else if (req.body.image !== undefined) {
+      // If image is explicitly passed as null/empty string to remove it
+      if (!req.body.image && brand.image) {
+        removeFile(brand.image);
+        newImage = null;
+      } else if (req.body.image) {
+        newImage = req.body.image;
+      }
+    }
+
+    // Parse active
+    let isActive = brand.active;
+    if (active !== undefined) {
+      isActive = active === true || active === "true" || active === 1 || active === "1" ? 1 : 0;
+    }
+
     // Update fields
     await brand.update({
       brand_name: brand_name !== undefined ? brand_name.trim() : brand.brand_name,
       description: description !== undefined ? description : brand.description,
-      active: active !== undefined ? (active ? 1 : 0) : brand.active,
+      image: newImage,
+      active: isActive,
     });
 
     res.status(200).json({
@@ -137,12 +168,8 @@ const updateBrand = async (req, res) => {
       data: brand,
     });
   } catch (error) {
-    console.error("Error in updateBrand:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update brand",
-      error: error.message,
-    });
+    if (req.file) removeFile(req.file.filename);
+    logError(res, error, "brand.updateBrand");
   }
 };
 
@@ -166,6 +193,11 @@ const deleteBrand = async (req, res) => {
       });
     }
 
+    // Remove associated image file
+    if (brand.image) {
+      removeFile(brand.image);
+    }
+
     await brand.destroy();
 
     res.status(200).json({
@@ -173,12 +205,7 @@ const deleteBrand = async (req, res) => {
       message: `Brand with ID ${id} deleted successfully`,
     });
   } catch (error) {
-    console.error("Error in deleteBrand:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete brand",
-      error: error.message,
-    });
+    logError(res, error, "brand.deleteBrand");
   }
 };
 

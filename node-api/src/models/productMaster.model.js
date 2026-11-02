@@ -40,6 +40,11 @@ const ProductMaster = sequelize.define(
       allowNull: true,
       defaultValue: null,
     },
+    image: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: null,
+    },
     price: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,

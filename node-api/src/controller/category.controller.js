@@ -1,6 +1,7 @@
 const { Op } = require("sequelize");
 const { Category } = require("../models");
 const { IsEmpty } = require("../helper/validate");
+const logError = require("../helper/log_error");
 
 // 1. GET ALL CATEGORIES
 const getCategory = async (req, res) => {
@@ -29,12 +30,7 @@ const getCategory = async (req, res) => {
       list: categories,
     });
   } catch (error) {
-    console.error("Error in getCategory:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    logError(res, error, "category.getCategory");
   }
 };
 
@@ -76,12 +72,7 @@ const createCategory = async (req, res) => {
       data: newCategory,
     });
   } catch (error) {
-    console.error("Error in createCategory:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create category",
-      error: error.message,
-    });
+    logError(res, error, "category.createCategory");
   }
 };
 
@@ -137,12 +128,7 @@ const updateCategory = async (req, res) => {
       data: category,
     });
   } catch (error) {
-    console.error("Error in updateCategory:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update category",
-      error: error.message,
-    });
+    logError(res, error, "category.updateCategory");
   }
 };
 
@@ -173,12 +159,7 @@ const deleteCategory = async (req, res) => {
       message: `Category with ID ${id} deleted successfully`,
     });
   } catch (error) {
-    console.error("Error in deleteCategory:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete category",
-      error: error.message,
-    });
+    logError(res, error, "category.deleteCategory");
   }
 };
 

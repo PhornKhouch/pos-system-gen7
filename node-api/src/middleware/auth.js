@@ -33,6 +33,24 @@ const validate_token = () => {
   };
 };
 
+// Storefront customer token (issued by /api/v1/customer/login|register, payload.type === "customer")
+const validate_customer_token = () => {
+  return (req, res, next) => {
+    const authorization = req.headers.authorization || "";
+    const token_from_client = authorization.startsWith("Bearer ") ? authorization.split(" ")[1] : null;
 
+    if (!token_from_client) {
+      return res.status(401).send({ success: false, message: "Please login to continue" });
+    }
 
-module.exports = { validate_token };
+    jwt.verify(token_from_client, TOKEN_RESORUCE_SECRET, (error, result) => {
+      if (error || !result || result.type !== "customer" || !result.customer_id) {
+        return res.status(401).send({ success: false, message: "Session expired, please login again" });
+      }
+      req.customer = result;
+      next();
+    });
+  };
+};
+
+module.exports = { validate_token, validate_customer_token };

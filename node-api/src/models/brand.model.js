@@ -19,6 +19,11 @@ const Brand = sequelize.define(
       allowNull: true,
       defaultValue: null,
     },
+    image: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: null,
+    },
     active: {
       type: DataTypes.TINYINT(1),
       allowNull: false,

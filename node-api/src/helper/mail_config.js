@@ -37,4 +37,4 @@ async function sendMail(req, res) {
     }
 }
 
-module.exports = { sendMail };
+module.exports = { sendMail, transporter };

@@ -18,7 +18,7 @@ Welcome to the modular API testing directory. All API endpoints and test request
 
 ## 🌐 Common Configuration
 
-- **Server Base URL**: `http://localhost:3000`
+- **Server Base URL**: `http://localhost:5000`
 - **Default Headers**:
   ```http
   Content-Type: application/json
@@ -35,14 +35,14 @@ Welcome to the modular API testing directory. All API endpoints and test request
 
 When testing the POS system from scratch or with a fresh database:
 
-1. **Step 1: User & Auth** ([user_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/POS/node-api/api_tests/user_api_test.md))
-   - Register user & login to get JWT token.
-2. **Step 2: Category** ([category_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/POS/node-api/api_tests/category_api_test.md))
+1. **Step 1: User & Auth** ([user_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/pos-system-gen7/node-api/api_tests/user_api_test.md) / [user_api_test.http](file:///d:/TRANING/Web%20Frontend%2019/FullStack/pos-system-gen7/node-api/api_tests/user_api_test.http))
+   - Create user, test CRUD, & login to get JWT token.
+2. **Step 2: Category** ([category_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/pos-system-gen7/node-api/api_tests/category_api_test.md))
    - Create categories (e.g. `Hot Coffee`, `Iced Tea`). Note `category_id`.
-3. **Step 3: Brand** ([brand_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/POS/node-api/api_tests/brand_api_test.md))
+3. **Step 3: Brand** ([brand_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/pos-system-gen7/node-api/api_tests/brand_api_test.md))
    - Create brands (e.g. `Starbucks`, `Amazon Cafe`). Note `brand_id`.
-4. **Step 4: Attribute** ([attribute_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/POS/node-api/api_tests/attribute_api_test.md))
+4. **Step 4: Attribute** ([attribute_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/pos-system-gen7/node-api/api_tests/attribute_api_test.md))
    - Create attributes (e.g. `Size: Grande`, `Sugar: 50%`). Note `attribute_id`.
-5. **Step 5: Product Master** ([product_master_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/POS/node-api/api_tests/product_master_api_test.md))
+5. **Step 5: Product Master** ([product_master_api_test.md](file:///d:/TRANING/Web%20Frontend%2019/FullStack/pos-system-gen7/node-api/api_tests/product_master_api_test.md))
    - Create products referencing `category_id`, `brand_id`, and `attribute_id`.
    - Verify joined models with `GET /api/v1/productmaster/getall`.
