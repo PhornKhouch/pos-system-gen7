@@ -1,0 +1,315 @@
+/* ==========================================================================
+   Storefront Product Detail Page
+   Uses the --store-* tokens defined on .store-root (components/store.css)
+   ========================================================================== */
+
+.pd-body {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+/* --------------------------------------------------------------------------
+   Gallery
+   -------------------------------------------------------------------------- */
+.pd-gallery {
+  flex: 1 1 360px;
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+}
+
+.pd-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: none;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.pd-thumb {
+  width: 62px;
+  height: 62px;
+  flex: none;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid var(--store-line);
+  background: linear-gradient(140deg, #f0f2f6, #dce1e9);
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 12px var(--store-mono);
+  color: #a7aeba;
+  transition: border-color 150ms;
+}
+
+.pd-thumb:hover {
+  border-color: var(--store-sub);
+}
+
+.pd-thumb.active {
+  border: 2px solid var(--store-accent);
+}
+
+.pd-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pd-main-image {
+  flex: 1;
+  min-width: 0;
+  height: 460px;
+  border-radius: 14px;
+  border: 1px solid var(--store-line);
+  background: linear-gradient(140deg, #f0f2f6, #dce1e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font: 700 14px var(--store-mono);
+  color: #a7aeba;
+}
+
+.pd-main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   Info column
+   -------------------------------------------------------------------------- */
+.pd-info {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pd-eyebrow {
+  font: 600 11.5px var(--store-mono);
+  color: var(--store-sub);
+}
+
+.pd-title {
+  margin: 7px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.pd-price {
+  font: 700 30px var(--store-mono);
+  letter-spacing: -0.03em;
+}
+
+.pd-stock-box {
+  border: 1px solid var(--store-line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.pd-stock-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.pd-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 7px;
+  margin-top: 5px;
+  flex: none;
+  background: var(--store-ink);
+}
+
+.pd-dot.in {
+  background: var(--store-green);
+}
+
+.pd-dot.low {
+  background: var(--store-amber);
+}
+
+.pd-dot.out {
+  background: var(--store-red);
+}
+
+.pd-stock-title {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.pd-stock-note {
+  font-size: 11.5px;
+  color: var(--store-sub);
+  margin-top: 2px;
+}
+
+.pd-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.pd-qty {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--store-line);
+  border-radius: 10px;
+  background: #fff;
+  height: 48px;
+  flex: none;
+}
+
+.pd-qty button {
+  border: 0;
+  background: transparent;
+  color: var(--store-sub);
+  height: 100%;
+  padding: 0 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.pd-qty button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pd-qty span {
+  font: 700 14px var(--store-mono);
+  min-width: 18px;
+  text-align: center;
+}
+
+.pd-add {
+  flex: 1;
+  height: 48px;
+}
+
+.pd-add:disabled {
+  background: var(--store-soft);
+  color: var(--store-muted);
+  cursor: not-allowed;
+}
+
+.pd-wish {
+  height: 48px;
+  padding: 0 16px;
+}
+
+.pd-added {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--store-green);
+  background: rgba(10, 122, 82, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.pd-pay-note {
+  font-size: 11.5px;
+  color: var(--store-sub);
+  line-height: 1.6;
+}
+
+.pd-section {
+  border-top: 1px solid var(--store-line);
+  padding-top: 14px;
+}
+
+.pd-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+
+.pd-description {
+  font-size: 12.5px;
+  color: var(--store-sub);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.pd-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 16px;
+  font-size: 12.5px;
+}
+
+.pd-spec-row {
+  display: flex;
+  gap: 10px;
+}
+
+.pd-spec-row span:first-child {
+  color: var(--store-sub);
+  width: 78px;
+  flex: none;
+}
+
+.pd-spec-row span:last-child {
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------
+   Related products
+   -------------------------------------------------------------------------- */
+.pd-related {
+  margin-top: 32px;
+}
+
+.pd-related-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .pd-gallery {
+    flex-direction: column-reverse;
+  }
+
+  .pd-thumbs {
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+  }
+
+  .pd-main-image {
+    height: 280px;
+  }
+
+  .pd-title {
+    font-size: 22px;
+  }
+
+  .pd-specs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pd-related-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -89,11 +89,11 @@ export function Navbar() {
                 style={{ backgroundColor: '#1677ff', cursor: 'pointer' }}
                 icon={<UserOutlined />}
               >
-                {user.name ? user.name.charAt(0).toUpperCase() : null}
+                {(user.name || user.full_name || user.username || 'U')?.charAt(0)?.toUpperCase()}
               </Avatar>
               <div style={{ lineHeight: 1.2, textAlign: 'left' }}>
                 <Text strong style={{ fontSize: 13, display: 'block' }}>
-                  {user.name}
+                  {user.name || user.full_name || user.username || 'User'}
                 </Text>
                 <Text type="secondary" style={{ fontSize: 11 }}>
                   {user.role}

@@ -45,3 +45,6 @@ lerna-debug.log*
 ._*
 Thumbs.db
 desktop.ini
+
+# Archives
+*.zip

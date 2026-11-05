@@ -25,7 +25,7 @@ export function EmployeeForm({ onSubmit, onCancel, isLoading }) {
         name="name"
         rules={[{ required: true, message: 'Please enter employee name!' }]}
       >
-        <Input placeholder="e.g. Liam Vance" />
+        <Input />
       </Form.Item>
 
       <Form.Item
@@ -36,7 +36,7 @@ export function EmployeeForm({ onSubmit, onCancel, isLoading }) {
           { type: 'email', message: 'Please enter a valid email!' },
         ]}
       >
-        <Input placeholder="liam.vance@company.com" />
+        <Input />
       </Form.Item>
 
       <Form.Item
@@ -44,7 +44,7 @@ export function EmployeeForm({ onSubmit, onCancel, isLoading }) {
         name="position"
         rules={[{ required: true, message: 'Please enter position!' }]}
       >
-        <Input placeholder="e.g. Senior Backend Engineer" />
+        <Input />
       </Form.Item>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

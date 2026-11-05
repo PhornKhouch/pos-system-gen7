@@ -61,3 +61,5 @@ desktop.ini
 .temp/
 tmp/
 *.tmp
+
+*.zip

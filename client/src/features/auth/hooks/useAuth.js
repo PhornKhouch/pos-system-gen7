@@ -17,28 +17,20 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      const data = await authApi.login(credentials);
-      setAuth(data.user, data.token);
+      const data = await authApi.login({
+        email: credentials.email?.trim(),
+        password: credentials.password,
+      });
+      const rawUser = data.user || {};
+      const normalizedUser = {
+        ...rawUser,
+        name: rawUser.full_name || rawUser.username || rawUser.name || rawUser.email,
+      };
+      setAuth(normalizedUser, data.token);
       navigate(ROUTES.DASHBOARD);
       return data;
     } catch (err) {
       setError(err.message || 'Login failed');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (userData) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await authApi.register(userData);
-      setAuth(data.user, data.token);
-      navigate(ROUTES.DASHBOARD);
-      return data;
-    } catch (err) {
-      setError(err.message || 'Registration failed');
       throw err;
     } finally {
       setLoading(false);
@@ -56,7 +48,6 @@ export function useAuth() {
     loading,
     error,
     login: handleLogin,
-    register: handleRegister,
     logout: handleLogout,
   };
 }

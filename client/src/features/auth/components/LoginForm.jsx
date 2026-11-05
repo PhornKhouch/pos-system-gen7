@@ -2,8 +2,6 @@ import React from 'react';
 import { Form, Input, Button, Card, Typography, App, Alert } from 'antd';
 import { MailOutlined, LockOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
-import { Link } from 'react-router-dom';
-import { ROUTES } from '@/routes/routeConfig';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -14,7 +12,10 @@ export function LoginForm() {
 
   const handleFinish = async (values) => {
     try {
-      await login(values);
+      await login({
+        email: values.email?.trim(),
+        password: values.password,
+      });
       message.success('Successfully signed in!');
     } catch (err) {
       message.error(err.message || 'Login failed');
@@ -51,7 +52,7 @@ export function LoginForm() {
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ email: 'admin@company.com', password: 'password123' }}
+        initialValues={{ email: 'pkhouch97@gmail.com', password: '123' }}
         onFinish={handleFinish}
         requiredMark={false}
       >
@@ -88,12 +89,9 @@ export function LoginForm() {
           </Button>
         </Form.Item>
 
-        <div style={{ textAlign: 'center' }}>
-          <Text type="secondary" style={{ fontSize: '0.85rem' }}>
-            Don't have an account?{' '}
-            <Link to={ROUTES.REGISTER} style={{ color: '#1677ff', fontWeight: 600 }}>
-              Sign up
-            </Link>
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <Text type="secondary" style={{ fontSize: '0.8rem', color: 'rgba(0, 0, 0, 0.45)' }}>
+            Restricted access for authorized administrators only
           </Text>
         </div>
       </Form>

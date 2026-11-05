@@ -134,8 +134,8 @@ export function ProductManagement() {
               icon={<PlusOutlined />}
               style={{ borderRadius: 8, fontWeight: 500 }}
               onClick={() => {
-                if (currentTab !== 'categories') {
-                  setSearchParams({ tab: 'categories' });
+                if (currentTab !== 'catalog') {
+                  setSearchParams({ tab: 'catalog' });
                 }
               }}
             >
