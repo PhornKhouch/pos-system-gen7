@@ -2,10 +2,14 @@ const stripe = require('stripe');
 require('dotenv').config();
 const axios = require('axios');
 const { BakongKHQR, khqrData, IndividualInfo } = require("bakong-khqr");
-const { sequelize, ProductMaster, Sale, SaleItem, SalePayment, SaleReceipt } = require("../models");
+const {
+    sequelize, ProductMaster, Sale, SaleItem, SalePayment, SaleReceipt,
+    CustomerCart, CusOrder, CusOrderItem, CusPayment, CusPayInv, CustomerProfile,
+} = require("../models");
+const { transporter } = require("../helper/mail_config");
 const logError = require("../helper/log_error");
 const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
-const appUrl = 'http://localhost:3000';
+const appUrl = process.env.CLIENT_URL||'http://localhost:3000';
 
 const createCheckoutSession = async (request, response) => {
   try {
@@ -530,4 +534,387 @@ const verifyKHQR = async (req, res) => {
         logError(res, error, "payment.verifyKHQR");
     }
 };
-module.exports = { createCheckoutSession ,PaymentSuccess ,generateKHQR , verifyKHQR , checkPaymentStatus , cancelKHQR };
+
+
+// ─── Storefront card payment (Stripe Checkout) ───
+// Flow:
+//   1. cardCheckout      → prices the customer's cart from DB, saves CusOrder + CusOrderItems (status "pending")
+//                          and a pending CusPayment (method "card", reference = Stripe session id),
+//                          returns the Stripe hosted checkout URL.
+//   2. cardVerify        → Stripe redirects the customer to /index/checkout/success?session_id=...;
+//                          the page calls this. When Stripe says "paid" and the amount matches, the order is
+//                          completed: payment "completed", invoice (CusPayInv) created, stock deducted,
+//                          purchased items removed from the cart. Safe to call more than once.
+//   3. cardCancel        → customer pressed "back" on Stripe; pending order is cancelled.
+
+const CARD_PAYMENT_METHOD = "card";
+const toCents = (usd) => Math.round(Number(usd) * 100);
+
+const loadCustomerOrder = (orderId) => CusOrder.findByPk(orderId, {
+    include: [
+        { model: CusOrderItem, as: 'items', include: [{ model: ProductMaster, as: 'product', attributes: ['product_id', 'product_name', 'sku', 'image'] }] },
+        { model: CusPayment, as: 'payments' },
+        { model: CusPayInv, as: 'invoice' },
+    ],
+});
+
+const buildOrderResponse = (order, session) => {
+    const payment = (order.payments || []).find((p) => p.payment_method === CARD_PAYMENT_METHOD);
+    return {
+        order_id: order.order_id,
+        order_no: order.order_no,
+        status: order.status,
+        total_amount: Number(order.total_amount),
+        invoice_number: order.invoice?.invoice_number || null,
+        paid_at: payment?.status === 'completed' ? payment.payment_date : null,
+        payment_method: 'CARD',
+        card_brand: session?.payment_intent?.payment_method?.card?.brand || null,
+        card_last4: session?.payment_intent?.payment_method?.card?.last4 || null,
+        items: (order.items || []).map((item) => ({
+            product_id: item.product_id,
+            product_name: item.product?.product_name || null,
+            quantity: item.quantity,
+            unit_price: Number(item.unit_price),
+            total_price: Number(item.total_price),
+        })),
+    };
+};
+
+// Marks the order paid, creates the invoice, deducts stock and removes the bought items from the cart.
+// Locks the order row so two concurrent verify calls cannot complete it twice.
+// Returns true only for the call that actually completed the order (used to send the email once).
+const completeCardOrder = async (orderId, session) => {
+    return sequelize.transaction(async (t) => {
+        const order = await CusOrder.findByPk(orderId, { transaction: t, lock: t.LOCK.UPDATE });
+        if (!order || order.status === 'completed') return false;
+
+        const items = await CusOrderItem.findAll({ where: { order_id: orderId }, transaction: t });
+        let payment = await CusPayment.findOne({
+            where: { order_id: orderId, payment_method: CARD_PAYMENT_METHOD },
+            order: [['payment_id', 'DESC']],
+            transaction: t,
+        });
+
+        if (payment) {
+            await payment.update({ status: 'completed', payment_date: new Date() }, { transaction: t });
+        } else {
+            payment = await CusPayment.create({
+                order_id: orderId,
+                amount: order.total_amount,
+                payment_method: CARD_PAYMENT_METHOD,
+                status: 'completed',
+                reference_number: session.id,
+            }, { transaction: t });
+        }
+
+        // Money is already received: even if the order was cancelled meanwhile, it becomes completed
+        await order.update({ status: 'completed' }, { transaction: t });
+
+        await CusPayInv.create({
+            order_id: orderId,
+            payment_id: payment.payment_id,
+            invoice_number: `CINV-${String(orderId).padStart(6, '0')}`,
+            amount: order.total_amount,
+            tax_amount: 0,
+        }, { transaction: t });
+
+        for (const item of items) {
+            await ProductMaster.decrement('quantity_stock', {
+                by: item.quantity,
+                where: { product_id: item.product_id },
+                transaction: t,
+            });
+        }
+
+        await CustomerCart.destroy({
+            where: { customer_id: order.customer_id, product_id: items.map((i) => i.product_id) },
+            transaction: t,
+        });
+        return true;
+    });
+};
+
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+const usd = (amount) => `$${Number(amount).toFixed(2)}`;
+
+// Payment confirmation / receipt email to the customer (Gmail transporter from helper/mail_config).
+// Never throws: a mail failure must not fail a payment that already succeeded.
+const sendCardPaymentEmail = async (order, session) => {
+    try {
+        if (!process.env.EMAIL || !process.env.APP_PASSWORD) {
+            console.warn(`Payment email skipped for ${order.order_no}: EMAIL / APP_PASSWORD not set in .env`);
+            return;
+        }
+        const customer = await CustomerProfile.findByPk(order.customer_id, { attributes: ['customer_name', 'email'] });
+        const to = customer?.email || session.customer_details?.email;
+        if (!to) return;
+
+        const data = buildOrderResponse(order, session);
+        const card = data.card_brand ? `${data.card_brand.toUpperCase()} •••• ${data.card_last4}` : 'Card';
+        const paidAt = data.paid_at ? new Date(data.paid_at).toLocaleString('en-US') : '';
+        const rows = data.items.map((item) => `
+            <tr>
+                <td style="padding:8px 0;border-bottom:1px solid #eee">${escapeHtml(item.product_name || `Product #${item.product_id}`)}</td>
+                <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:center">${item.quantity}</td>
+                <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right">${usd(item.unit_price)}</td>
+                <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right">${usd(item.total_price)}</td>
+            </tr>`).join('');
+
+        await transporter.sendMail({
+            from: process.env.EMAIL,
+            to,
+            subject: `Payment received – Order ${data.order_no}`,
+            html: `
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#222">
+                <h2 style="margin-bottom:4px">Thank you for your order!</h2>
+                <p>Hi ${escapeHtml(customer?.customer_name || 'there')},</p>
+                <p>We have received your card payment. Here is your receipt:</p>
+                <table style="width:100%;font-size:14px;margin:12px 0">
+                    <tr><td>Order no.</td><td style="text-align:right"><b>${escapeHtml(data.order_no)}</b></td></tr>
+                    <tr><td>Invoice</td><td style="text-align:right">${escapeHtml(data.invoice_number || '-')}</td></tr>
+                    <tr><td>Paid with</td><td style="text-align:right">${escapeHtml(card)}</td></tr>
+                    <tr><td>Paid at</td><td style="text-align:right">${escapeHtml(paidAt)}</td></tr>
+                </table>
+                <table style="width:100%;font-size:14px;border-collapse:collapse">
+                    <thead><tr style="text-align:left;color:#666">
+                        <th style="padding:8px 0;border-bottom:2px solid #ddd">Item</th>
+                        <th style="padding:8px 0;border-bottom:2px solid #ddd;text-align:center">Qty</th>
+                        <th style="padding:8px 0;border-bottom:2px solid #ddd;text-align:right">Price</th>
+                        <th style="padding:8px 0;border-bottom:2px solid #ddd;text-align:right">Total</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <p style="text-align:right;font-size:16px"><b>Total paid: ${usd(data.total_amount)}</b></p>
+                <p style="color:#666;font-size:13px">If you have any questions about this order, just reply to this email.</p>
+            </div>`,
+        });
+        console.log(`Payment email sent for ${data.order_no} to ${to}`);
+    } catch (error) {
+        console.error(`Payment email failed for order ${order?.order_no}:`, error.message);
+    }
+};
+
+// POST /api/v1/cardpayway/checkout  (customer token) — body: { notes? }
+const cardCheckout = async (req, res) => {
+    let orderId = null;
+    try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            return res.status(500).json({ success: false, message: 'Card payment is not configured. Set STRIPE_SECRET_KEY in .env' });
+        }
+
+        const customerId = req.customer.customer_id;
+        const notes = req.body?.notes ? String(req.body.notes).slice(0, 500) : null;
+
+        // Price comes from the database cart, never from the client
+        const cartItems = await CustomerCart.findAll({
+            where: { customer_id: customerId },
+            include: [{ model: ProductMaster, as: 'product' }],
+        });
+        if (cartItems.length === 0) {
+            return res.status(400).json({ success: false, message: 'Your cart is empty' });
+        }
+
+        const lines = [];
+        for (const item of cartItems) {
+            const product = item.product;
+            if (!product || product.active !== 1) {
+                return res.status(400).json({ success: false, message: `Product #${item.product_id} is no longer available. Please remove it from your cart.` });
+            }
+            if (product.quantity_stock < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: product.quantity_stock > 0
+                        ? `Only ${product.quantity_stock} unit(s) of ${product.product_name} in stock`
+                        : `${product.product_name} is out of stock`,
+                });
+            }
+            const unitPrice = round2(product.price);
+            if (!(unitPrice > 0)) { // DB constraint chk_cus_oitem_price
+                return res.status(400).json({ success: false, message: `${product.product_name} has no price set` });
+            }
+            lines.push({
+                product,
+                product_id: product.product_id,
+                quantity: item.quantity,
+                unit_price: unitPrice,
+                total_price: round2(unitPrice * item.quantity),
+            });
+        }
+
+        const totalAmount = round2(lines.reduce((sum, line) => sum + line.total_price, 0));
+        if (toCents(totalAmount) < 50) { // Stripe minimum charge is $0.50
+            return res.status(400).json({ success: false, message: 'Order total must be at least $0.50 for card payment' });
+        }
+
+        const order = await sequelize.transaction(async (t) => {
+            const created = await CusOrder.create({
+                order_no: `TMP-${Date.now()}-${customerId}`,
+                customer_id: customerId,
+                total_amount: totalAmount,
+                discount: 0,
+                status: 'pending',
+                notes,
+            }, { transaction: t });
+
+            await created.update({ order_no: `CO-${String(created.order_id).padStart(6, '0')}` }, { transaction: t });
+
+            await CusOrderItem.bulkCreate(
+                lines.map(({ product, ...line }) => ({ ...line, order_id: created.order_id })),
+                { transaction: t }
+            );
+            return created;
+        });
+        orderId = order.order_id;
+
+        const session = await stripeInstance.checkout.sessions.create({
+            mode: 'payment',
+            payment_method_types: ['card'],
+            client_reference_id: String(order.order_id),
+            customer_email: req.customer.email || undefined,
+            metadata: { order_id: String(order.order_id), order_no: order.order_no, customer_id: String(customerId) },
+            line_items: lines.map((line) => ({
+                price_data: {
+                    currency: 'usd',
+                    product_data: { name: line.product.product_name, ...(line.product.sku ? { description: `SKU: ${line.product.sku}` } : {}) },
+                    unit_amount: toCents(line.unit_price),
+                },
+                quantity: line.quantity,
+            })),
+            success_url: `${appUrl}/index/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${appUrl}/index/cart?payment=cancelled&order_id=${order.order_id}`,
+            expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes (Stripe minimum)
+        });
+
+        await CusPayment.create({
+            order_id: order.order_id,
+            amount: totalAmount,
+            payment_method: CARD_PAYMENT_METHOD,
+            status: 'pending',
+            reference_number: session.id,
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                order_id: order.order_id,
+                order_no: order.order_no,
+                total_amount: totalAmount,
+                session_id: session.id,
+                url: session.url,
+            },
+            message: 'Checkout session created',
+        });
+    } catch (error) {
+        console.error("Card checkout error:", error.message);
+        // Don't leave a pending order behind when Stripe rejected the session
+        if (orderId) {
+            await CusOrder.update({ status: 'cancelled' }, { where: { order_id: orderId, status: 'pending' } }).catch(() => {});
+        }
+        if (error.type && String(error.type).startsWith('Stripe')) {
+            return res.status(502).json({ success: false, message: error.message || 'Stripe service error' });
+        }
+        logError(res, error, "payment.cardCheckout");
+    }
+};
+
+// GET /api/v1/cardpayway/checkout/verify?session_id=cs_...  (customer token)
+const cardVerify = async (req, res) => {
+    try {
+        const sessionId = String(req.query.session_id || '');
+        if (!sessionId.startsWith('cs_')) {
+            return res.status(400).json({ success: false, message: 'session_id is required' });
+        }
+
+        const session = await stripeInstance.checkout.sessions.retrieve(sessionId, {
+            expand: ['payment_intent.payment_method'],
+        });
+
+        const orderId = Number(session.metadata?.order_id);
+        let order = Number.isInteger(orderId) ? await loadCustomerOrder(orderId) : null;
+        if (!order || order.customer_id !== req.customer.customer_id) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+
+        if (order.status === 'completed') {
+            return res.status(200).json({ success: true, status: 'COMPLETED', data: buildOrderResponse(order, session), message: 'Payment completed' });
+        }
+
+        if (session.payment_status !== 'paid') {
+            return res.status(200).json({
+                success: false,
+                status: session.status === 'expired' ? 'EXPIRED' : 'UNPAID',
+                data: buildOrderResponse(order, session),
+                message: 'Payment has not been completed',
+            });
+        }
+
+        // Never trust "paid" alone — amount and currency must match the order
+        const isMatch = session.currency === 'usd' && session.amount_total === toCents(order.total_amount);
+        if (!isMatch) {
+            console.error(`Card payment mismatch order_id=${orderId}: expected ${toCents(order.total_amount)} usd, got ${session.amount_total} ${session.currency}`);
+            return res.status(409).json({ success: false, status: 'MISMATCH', message: 'Payment received does not match this order. Please contact support.' });
+        }
+
+        const completedNow = await completeCardOrder(orderId, session);
+        order = await loadCustomerOrder(orderId);
+        if (completedNow) {
+            sendCardPaymentEmail(order, session); // fire-and-forget, don't make the customer wait for SMTP
+        }
+        return res.status(200).json({ success: true, status: 'COMPLETED', data: buildOrderResponse(order, session), message: 'Payment completed' });
+    } catch (error) {
+        if (error.type === 'StripeInvalidRequestError') {
+            return res.status(404).json({ success: false, message: 'Checkout session not found' });
+        }
+        logError(res, error, "payment.cardVerify");
+    }
+};
+
+// POST /api/v1/cardpayway/checkout/cancel  (customer token) — body: { order_id }
+const cardCancel = async (req, res) => {
+    try {
+        const orderId = Number(req.body?.order_id);
+        if (!Number.isInteger(orderId)) {
+            return res.status(400).json({ success: false, message: 'order_id is required' });
+        }
+
+        const order = await CusOrder.findByPk(orderId);
+        if (!order || order.customer_id !== req.customer.customer_id) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        if (order.status !== 'pending') {
+            return res.status(200).json({ success: true, status: order.status.toUpperCase(), message: `Order is ${order.status}` });
+        }
+
+        const payment = await CusPayment.findOne({
+            where: { order_id: orderId, payment_method: CARD_PAYMENT_METHOD, status: 'pending' },
+        });
+
+        // Check one last time with Stripe so a just-paid order is never cancelled
+        if (payment?.reference_number) {
+            const session = await stripeInstance.checkout.sessions.retrieve(payment.reference_number);
+            if (session.payment_status === 'paid') {
+                return res.status(200).json({ success: true, status: 'PAID', message: 'This order is already paid' });
+            }
+            if (session.status === 'open') {
+                await stripeInstance.checkout.sessions.expire(session.id).catch(() => {});
+            }
+        }
+
+        await sequelize.transaction(async (t) => {
+            await CusOrder.update({ status: 'cancelled' }, { where: { order_id: orderId, status: 'pending' }, transaction: t });
+            await CusPayment.update({ status: 'failed' }, { where: { order_id: orderId, status: 'pending' }, transaction: t });
+        });
+
+        return res.status(200).json({ success: true, status: 'CANCELLED', message: 'Order cancelled' });
+    } catch (error) {
+        logError(res, error, "payment.cardCancel");
+    }
+};
+
+module.exports = {
+    createCheckoutSession, PaymentSuccess,
+    cardCheckout, cardVerify, cardCancel,
+    generateKHQR, verifyKHQR, checkPaymentStatus, cancelKHQR,
+};

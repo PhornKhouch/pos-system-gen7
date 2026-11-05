@@ -19,6 +19,7 @@ var productImageRoute = require('./src/route/productImage.route');
 var customerRoute = require('./src/route/customer.route');
 var paymentRoute = require('./src/route/payment.route');
 var saleRoute = require('./src/route/sale.route');
+var generalSettingRoute = require('./src/route/generalSetting.route');
 
 //import models
 const {
@@ -37,6 +38,7 @@ productImageRoute(app);
 customerRoute(app);
 paymentRoute(app);
 saleRoute(app);
+generalSettingRoute(app);
 // auto sync models
 sequelize.sync().then(() => {
     console.log("Database synced!");

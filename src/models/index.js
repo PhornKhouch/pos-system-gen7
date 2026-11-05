@@ -15,6 +15,7 @@ const CusOrderItem = require("./cusOrderItem.model");
 const CusPayment = require("./cusPayment.model");
 const CusPayInv = require("./cusPayInv.model");
 const CustomerCart = require("./customerCart.model");
+const GeneralSetting = require("./generalSetting.model");
 
 // Associations / Relationships
 ProductMaster.belongsTo(Category, { foreignKey: "category_id", as: "category" });
@@ -101,4 +102,5 @@ module.exports = {
   CustomerInvoice: CusPayInv,
   CusInvoice: CusPayInv,
   CustomerCart,
+  GeneralSetting,
 };
