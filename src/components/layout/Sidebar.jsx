@@ -8,6 +8,10 @@ import {
   ShopOutlined,
   InboxOutlined,
   AppstoreOutlined,
+  ShoppingCartOutlined,
+  ContactsOutlined,
+  OrderedListOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { useAppStore } from '@/store/store';
 
@@ -38,9 +42,24 @@ export function Sidebar() {
       label: 'Dashboard',
     },
     {
+      key: '/pos',
+      icon: <ShoppingCartOutlined />,
+      label: 'POS Register',
+    },
+    {
       key: '/users',
       icon: <UserOutlined />,
       label: 'Users',
+    },
+    {
+      key: '/customers',
+      icon: <ContactsOutlined />,
+      label: 'Customers',
+    },
+    {
+      key: '/customer-orders',
+      icon: <OrderedListOutlined />,
+      label: 'Customer Orders',
     },
     {
       key: 'inventory',
@@ -63,6 +82,11 @@ export function Sidebar() {
       key: '/employee',
       icon: <TeamOutlined />,
       label: 'Employees',
+    },
+    {
+      key: '/settings',
+      icon: <SettingOutlined />,
+      label: 'General Settings',
     },
   ];
 

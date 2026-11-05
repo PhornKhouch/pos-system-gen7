@@ -23,33 +23,71 @@ export const brandApi = {
   },
 
   /**
-   * Create a new brand
-   * @param {Object} data - { brand_name: string, description?: string, active?: number | boolean }
+   * Create a new brand with optional image upload
+   * @param {Object|FormData} data - { brand_name: string, description?: string, image?: File|string, active?: number | boolean }
    * @returns {Promise<{ success: boolean, message: string, data: Object }>}
    */
   createBrand: async (data) => {
-    const payload = {
-      brand_name: data.brand_name.trim(),
-      description: data.description ? data.description.trim() : null,
-      active: data.active ? 1 : 0,
-    };
-    const response = await apiClient.post('/brand/create', payload);
+    let payload;
+    let headers = {};
+
+    if (data instanceof FormData) {
+      payload = data;
+      headers = { 'Content-Type': 'multipart/form-data' };
+    } else if (data.imageFile || data.image instanceof File) {
+      const formData = new FormData();
+      formData.append('brand_name', data.brand_name.trim());
+      if (data.description) formData.append('description', data.description.trim());
+      formData.append('active', data.active ? 1 : 0);
+      const file = data.imageFile || data.image;
+      formData.append('image', file);
+      payload = formData;
+      headers = { 'Content-Type': 'multipart/form-data' };
+    } else {
+      payload = {
+        brand_name: data.brand_name.trim(),
+        description: data.description ? data.description.trim() : null,
+        image: data.image || null,
+        active: data.active ? 1 : 0,
+      };
+    }
+
+    const response = await apiClient.post('/brand/create', payload, { headers });
     return response;
   },
 
   /**
-   * Update brand by ID
+   * Update brand by ID with optional image upload
    * @param {number|string} id - Brand ID
-   * @param {Object} data - { brand_name: string, description?: string, active?: number | boolean }
+   * @param {Object|FormData} data - { brand_name: string, description?: string, image?: File|string, active?: number | boolean }
    * @returns {Promise<{ success: boolean, message: string, data: Object }>}
    */
   updateBrand: async (id, data) => {
-    const payload = {
-      brand_name: data.brand_name.trim(),
-      description: data.description ? data.description.trim() : null,
-      active: data.active ? 1 : 0,
-    };
-    const response = await apiClient.put(`/brand/update/${id}`, payload);
+    let payload;
+    let headers = {};
+
+    if (data instanceof FormData) {
+      payload = data;
+      headers = { 'Content-Type': 'multipart/form-data' };
+    } else if (data.imageFile || data.image instanceof File) {
+      const formData = new FormData();
+      if (data.brand_name) formData.append('brand_name', data.brand_name.trim());
+      if (data.description !== undefined) formData.append('description', data.description ? data.description.trim() : '');
+      if (data.active !== undefined) formData.append('active', data.active ? 1 : 0);
+      const file = data.imageFile || data.image;
+      formData.append('image', file);
+      payload = formData;
+      headers = { 'Content-Type': 'multipart/form-data' };
+    } else {
+      payload = {
+        brand_name: data.brand_name ? data.brand_name.trim() : undefined,
+        description: data.description !== undefined ? (data.description ? data.description.trim() : null) : undefined,
+        image: data.image,
+        active: data.active !== undefined ? (data.active ? 1 : 0) : undefined,
+      };
+    }
+
+    const response = await apiClient.put(`/brand/update/${id}`, payload, { headers });
     return response;
   },
 
@@ -65,3 +103,4 @@ export const brandApi = {
 };
 
 export default brandApi;
+

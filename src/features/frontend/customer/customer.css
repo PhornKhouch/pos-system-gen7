@@ -1,0 +1,494 @@
+/* ==========================================================================
+   Storefront customer pages: login, register, cart, account
+   Uses the --store-* tokens defined on .store-root (components/store.css)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Login / Register
+   -------------------------------------------------------------------------- */
+.cust-auth {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.cust-auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border: 1px solid var(--store-line);
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cust-auth-card .store-logo-mark {
+  width: 38px;
+  height: 38px;
+  font-size: 17px;
+}
+
+.cust-auth-card h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.cust-auth-sub {
+  font-size: 13px;
+  color: var(--store-sub);
+  margin-top: -6px;
+}
+
+.cust-auth-notice,
+.cust-auth-error {
+  font-size: 12.5px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+.cust-auth-notice {
+  background: rgba(15, 157, 107, 0.08);
+  color: var(--store-green);
+}
+
+.cust-auth-error {
+  background: #fdecea;
+  color: #b3251b;
+}
+
+.cust-auth-error a,
+.cust-auth-switch a {
+  color: var(--store-accent);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.cust-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cust-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.cust-form input {
+  border: 1px solid var(--store-line);
+  background: var(--store-soft);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 13.5px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms, background 150ms;
+}
+
+.cust-form input:focus {
+  border-color: var(--store-accent);
+  background: #fff;
+}
+
+.cust-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cust-optional {
+  color: var(--store-muted);
+  font-weight: 500;
+}
+
+.cust-submit {
+  width: 100%;
+  height: 46px;
+  margin-top: 4px;
+}
+
+.cust-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cust-auth-switch {
+  font-size: 12.5px;
+  color: var(--store-sub);
+  text-align: center;
+}
+
+/* Google login */
+.cust-google-btn {
+  width: 100%;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--store-line);
+  font-weight: 600;
+}
+
+.cust-google-btn:hover:not(:disabled) {
+  background: var(--store-soft);
+}
+
+.cust-google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cust-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--store-muted);
+}
+
+.cust-divider::before,
+.cust-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--store-line);
+}
+
+/* Forgot password */
+.cust-forgot-link {
+  align-self: flex-end;
+  margin-top: -4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--store-accent);
+}
+
+.cust-forgot-link:hover {
+  text-decoration: underline;
+}
+
+.cust-link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--store-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cust-link-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cust-form input.cust-otp-input {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   Cart
+   -------------------------------------------------------------------------- */
+.cart-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.cart-list {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--store-line);
+  border-radius: 14px;
+}
+
+.cart-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+}
+
+.cart-row + .cart-row {
+  border-top: 1px solid var(--store-line);
+}
+
+.cart-thumb {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  border-radius: 10px;
+  border: 1px solid var(--store-line);
+  background: linear-gradient(140deg, #f0f2f6, #dce1e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font: 700 11px var(--store-mono);
+  color: #a7aeba;
+}
+
+.cart-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.cart-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-row-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.cart-row-name:hover {
+  color: var(--store-accent);
+}
+
+.cart-row-sku {
+  font: 600 11px var(--store-mono);
+  color: var(--store-sub);
+  margin-top: 3px;
+}
+
+.cart-row-warn {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--store-red);
+  margin-top: 3px;
+}
+
+.cart-qty {
+  height: 38px;
+}
+
+.cart-qty button {
+  padding: 0 10px;
+}
+
+.cart-row-price {
+  font: 700 14px var(--store-mono);
+  width: 96px;
+  text-align: right;
+  flex: none;
+}
+
+.cart-remove {
+  border: 0;
+  background: transparent;
+  color: var(--store-muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+}
+
+.cart-remove:hover {
+  color: var(--store-red);
+}
+
+.cart-summary {
+  width: 320px;
+  flex: none;
+  background: #fff;
+  border: 1px solid var(--store-line);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 86px;
+}
+
+.cart-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--store-sub);
+}
+
+.cart-summary-row span:last-child {
+  color: var(--store-ink);
+  font-weight: 600;
+}
+
+.cart-summary-row.total {
+  border-top: 1px solid var(--store-line);
+  padding-top: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--store-ink);
+}
+
+.cart-summary-row.total span:last-child {
+  font: 700 18px var(--store-mono);
+}
+
+.cart-continue {
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--store-accent);
+}
+
+.cart-pay-note {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--store-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Checkout result (Stripe card payment)
+   -------------------------------------------------------------------------- */
+.checkout-success {
+  margin: 0 auto;
+}
+
+.checkout-success-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.checkout-icon.ok {
+  color: #16a34a;
+}
+
+.checkout-icon.fail {
+  color: var(--store-red);
+}
+
+.checkout-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--store-line);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Account
+   -------------------------------------------------------------------------- */
+.cust-account {
+  max-width: 560px;
+}
+
+.cust-account-card {
+  background: #fff;
+  border: 1px solid var(--store-line);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.cust-account-card .pd-spec-row {
+  display: flex;
+  gap: 10px;
+}
+
+.cust-account-card .pd-spec-row span:first-child {
+  color: var(--store-sub);
+  width: 110px;
+  flex: none;
+}
+
+.cust-account-card .pd-spec-row span:last-child {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cust-account-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   Header badge
+   -------------------------------------------------------------------------- */
+.store-cart-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--store-accent);
+  color: #fff;
+  font: 700 10.5px var(--store-mono);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.store-tab {
+  position: relative;
+}
+
+.store-tab .store-cart-count {
+  position: absolute;
+  top: -2px;
+  left: calc(50% + 4px);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .cust-auth-card {
+    padding: 20px;
+  }
+
+  .cust-form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cart-layout {
+    flex-direction: column;
+  }
+
+  .cart-summary {
+    width: 100%;
+    position: static;
+  }
+
+  .cart-row {
+    flex-wrap: wrap;
+  }
+
+  .cart-row-info {
+    flex: 1 1 calc(100% - 86px);
+  }
+
+  .cart-qty {
+    margin-left: 86px;
+  }
+
+  .cart-row-price {
+    margin-left: auto;
+    width: auto;
+  }
+}

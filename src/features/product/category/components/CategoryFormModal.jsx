@@ -95,7 +95,6 @@ export function CategoryFormModal({
           ]}
         >
           <Input
-            placeholder="e.g. Hot Coffee, Laptops, Mobile Phones..."
             size="large"
             maxLength={100}
             showCount
@@ -115,7 +114,6 @@ export function CategoryFormModal({
         >
           <TextArea
             rows={3}
-            placeholder="Brief explanation of items categorized under this group..."
             maxLength={300}
             showCount
           />

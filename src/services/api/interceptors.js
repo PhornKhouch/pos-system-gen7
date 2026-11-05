@@ -41,7 +41,8 @@ export function setupInterceptors(apiInstance) {
         if (mockResult) return mockResult;
       }
 
-      if (error.response?.status === 401) {
+      // If 401 Unauthorized occurs on protected API calls (not during login attempts), clear auth and redirect
+      if (error.response?.status === 401 && !config?.url?.includes('/login')) {
         storageService.removeItem(STORAGE_KEYS.AUTH_TOKEN);
         storageService.removeItem(STORAGE_KEYS.USER_DATA);
         window.location.href = '/login';
@@ -79,19 +80,7 @@ async function handleMockApi(config) {
     return { success: true, data: { user, token } };
   }
 
-  // Auth: Register
-  if (url.includes('/auth/register') && method === 'post') {
-    const data = JSON.parse(config.data || '{}');
-    const user = {
-      id: 'usr_' + Date.now(),
-      name: data.name || 'New Member',
-      email: data.email,
-      role: 'Employee',
-      department: 'General',
-    };
-    const token = 'jwt_token_mock_' + Date.now();
-    return { success: true, data: { user, token } };
-  }
+
 
   // Users: List
   if (url.includes('/users') && method === 'get') {

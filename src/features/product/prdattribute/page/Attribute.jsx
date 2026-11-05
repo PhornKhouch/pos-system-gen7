@@ -1,68 +1,135 @@
-import React from 'react';
-import { Card, Button, Space, Typography, Tag, Table } from 'antd';
-import { AppstoreAddOutlined, PlusOutlined, FilterOutlined } from '@ant-design/icons';
-
-const { Text } = Typography;
+import React, { useState } from 'react';
+import { Card, Alert } from 'antd';
+import { useAttributes } from '../hooks/useAttributes';
+import { AttributeTable } from '../components/AttributeTable';
+import { AttributeFormModal } from '../components/AttributeFormModal';
+import { AttributeFilter } from '../components/AttributeFilter';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useModal } from '@/hooks/useModal';
+import { useNotification } from '@/hooks/useNotification';
 
 export function Attribute() {
-  const mockAttributes = [
-    { key: '1', name: 'Color', values: ['Space Gray', 'Silver', 'Midnight', 'Starlight'], status: 'Active' },
-    { key: '2', name: 'Storage', values: ['128GB', '256GB', '512GB', '1TB', '2TB'], status: 'Active' },
-    { key: '3', name: 'RAM Size', values: ['8GB', '16GB', '24GB', '32GB', '64GB'], status: 'Active' },
-    { key: '4', name: 'Connectivity', values: ['Bluetooth 5.3', 'Wi-Fi 6E', 'USB-C', 'Thunderbolt 4'], status: 'Active' },
-  ];
+  const { notifySuccess, notifyError } = useNotification();
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const [selectedAttribute, setSelectedAttribute] = useState(null);
 
-  const columns = [
-    {
-      title: 'Attribute Name',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text) => <Text strong>{text}</Text>,
-    },
-    {
-      title: 'Configured Values',
-      dataIndex: 'values',
-      key: 'values',
-      render: (values) => (
-        <Space wrap size={[4, 8]}>
-          {values.map((v) => (
-            <Tag key={v} color="blue">
-              {v}
-            </Tag>
-          ))}
-        </Space>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 120,
-      render: (status) => <Tag color="success">{status}</Tag>,
-    },
-  ];
+  const debouncedSearch = useDebounce(search, 300);
+  const { isOpen, open, close } = useModal();
+
+  const {
+    attributes,
+    total,
+    loading,
+    submitting,
+    error,
+    refetch,
+    addAttribute,
+    editAttribute,
+    removeAttribute,
+  } = useAttributes({
+    search: debouncedSearch,
+    active: status,
+  });
+
+  // Open modal for Create
+  const handleOpenCreateModal = () => {
+    setSelectedAttribute(null);
+    open();
+  };
+
+  // Open modal for Edit
+  const handleOpenEditModal = (attribute) => {
+    setSelectedAttribute(attribute);
+    open();
+  };
+
+  // Close modal and reset selection
+  const handleCloseModal = () => {
+    close();
+    setSelectedAttribute(null);
+  };
+
+  // Submit Handler for Create or Edit
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (selectedAttribute && selectedAttribute.attribute_id) {
+        const res = await editAttribute(selectedAttribute.attribute_id, formData);
+        notifySuccess('Success', res?.message || 'Attribute updated successfully!');
+      } else {
+        const res = await addAttribute(formData);
+        notifySuccess('Success', res?.message || 'Attribute created successfully!');
+      }
+      handleCloseModal();
+    } catch (err) {
+      notifyError('Error', err.message || 'Operation failed. Please try again.');
+    }
+  };
+
+  // Delete Handler
+  const handleDeleteAttribute = async (id) => {
+    try {
+      const res = await removeAttribute(id);
+      notifySuccess('Deleted', res?.message || 'Attribute deleted successfully!');
+    } catch (err) {
+      notifyError('Error', err.message || 'Failed to delete attribute.');
+    }
+  };
 
   return (
-    <Card
-      style={{
-        borderRadius: 12,
-        border: '1px solid var(--border-subtle)',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-      }}
-      title={
-        <Space>
-          <FilterOutlined style={{ color: '#1677ff' }} />
-          <span>Product Attributes & Variants</span>
-        </Space>
-      }
-      extra={
-        <Button type="primary" icon={<PlusOutlined />}>
-          Add Attribute
-        </Button>
-      }
-    >
-      <Table columns={columns} dataSource={mockAttributes} pagination={false} />
-    </Card>
+    <div className="attribute-management-container">
+      {/* Error Banner if API error occurs */}
+      {error && (
+        <Alert
+          type="error"
+          message="Failed to load attributes"
+          description={error}
+          showIcon
+          closable
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+
+      {/* Filter and Actions Bar */}
+      <AttributeFilter
+        search={search}
+        onSearchChange={setSearch}
+        status={status}
+        onStatusChange={setStatus}
+        onRefresh={refetch}
+        onAddClick={handleOpenCreateModal}
+        loading={loading}
+        totalCount={total}
+      />
+
+      {/* Attributes Table */}
+      <Card
+        bodyStyle={{ padding: 0 }}
+        style={{
+          borderRadius: 12,
+          overflow: 'hidden',
+          border: '1px solid var(--border-subtle)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+        }}
+      >
+        <AttributeTable
+          attributes={attributes}
+          loading={loading}
+          onEdit={handleOpenEditModal}
+          onDelete={handleDeleteAttribute}
+        />
+      </Card>
+
+      {/* Create / Edit Modal */}
+      <AttributeFormModal
+        open={isOpen}
+        attribute={selectedAttribute}
+        loading={submitting}
+        onSubmit={handleFormSubmit}
+        onCancel={handleCloseModal}
+      />
+    </div>
   );
 }
 
